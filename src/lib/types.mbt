@@ -6,8 +6,8 @@ pub(all) enum YamlValue {
   Number(Double)
   String(String)
   Array(Array[YamlValue])
-  Object(Map[YamlValue, YamlValue])
-}
+  Object(Map[String, YamlValue])
+} derive(Eq)
 
 /// 位置
 pub(all) struct Position {
@@ -15,18 +15,31 @@ pub(all) struct Position {
   column : Int  // 0-based
 } derive(Eq)
 
-/// 扩充后的解析错误类型
+/// 解析的文本
+priv struct ParseContext {
+  mut offset : Int
+  input : String
+  end_offset : Int
+}
+
+fn ParseContext::make(input : String) -> ParseContext {
+  { offset: 0, input, end_offset: input.length()}
+}
+
+
+/// 解析错误类型
 pub(all) type! ParseError {
-  InvalidChar(Position, Char)
-  InvalidEof
-  InvalidNumber(Position, String)
-  InvalidIdentEscape(Position)
+  InvalidChar(Position, Char)         // 错误字符
+  InvalidEof                          // 意外文件结束
+  InvalidNumber(Position, String)     // 错误数字
+  InvalidIdentEscape(Position)        // 错误转义字符
   InvalidIndentation(Position)        // 缩进错误
   UndefinedAnchor(Position, String)   // 未定义锚点
   CircularReference(Position, String) // 循环引用
   InvalidMerge(Position, String)      // 继承合并时类型错误
   InvalidComplexKey(Position)         // 复杂键语法错误
 } derive(Eq)
+
 
 /// 将 ParseError 转换为字符串
 pub fn to_string(self : ParseError) -> String {
@@ -75,6 +88,7 @@ pub impl Show for YamlValue with output(self, logger) {
       Show::output(a, logger)
       logger.write_string(")")
     }
+    
     Object(o) => {
       logger.write_string("Object(")
       Show::output(o, logger)
@@ -82,3 +96,5 @@ pub impl Show for YamlValue with output(self, logger) {
     }
   }
 }
+
+
