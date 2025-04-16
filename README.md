@@ -15,10 +15,9 @@ YAMLParser based on moonbit and is designed for efficient and strict YAML parsin
   - true/false values are parsed as booleans instead of strings.
   - String parsing: Supports single quotes ('), double quotes ("), and multi-line strings, automatically merging line breaks.
   - Number parsing: Supports binary (0b), scientific notation (1.23e4).
-  - 
+
 # Test Case
 ```Moonbit
-#|let yaml_str =
 #|boolean:
 #|  - TRUE
 #|  - FALSE
