@@ -4,7 +4,9 @@
       "moonbitlang/core/double",
       "moonbitlang/core/string",
       "moonbitlang/core/tuple",
-      "moonbitlang/core/strconv"
+      "moonbitlang/core/strconv", 
+      "moonbitlang/core/char",
+      "moonbitlang/core/int"
 
     ],
     "test-import": [
