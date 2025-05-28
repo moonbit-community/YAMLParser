@@ -15,58 +15,51 @@ pub(all) struct Position {
   column : Int  // 0-based
 } derive(Eq)
 
-/// 解析的文本
-priv struct ParseContext {
-  mut offset : Int
-  input : String
-  end_offset : Int
-}
-
-fn ParseContext::make(input : String) -> ParseContext {
-  { offset: 0, input, end_offset: input.length()}
-}
 
 
 /// 解析错误类型
 pub(all) type! ParseError {
-  InvalidChar(Position, Char)         // 错误字符
+  InvalidChar(Int, Int, Char)         // 错误字符
   InvalidEof                          // 意外文件结束
-  InvalidNumber(Position, String)     // 错误数字
-  InvalidIdentEscape(Position)        // 错误转义字符
-  InvalidIndentation(Position)        // 缩进错误
-  UndefinedAnchor(Position, String)   // 未定义锚点
-  CircularReference(Position, String) // 循环引用
-  InvalidMerge(Position, String)      // 继承合并时类型错误
-  InvalidComplexKey(Position)         // 复杂键语法错误
-} derive(Eq)
+  InvalidNumber(Int, Int, String)     // 错误数字
+  InvalidIdentEscape(Int, Int)        // 错误转义字符
+  InvalidIndentation(Int, Int)        // 缩进错误
+  UndefinedAnchor(Int, Int, String)   // 未定义锚点
+  CircularReference(Int, Int, String) // 循环引用
+  InvalidMerge(Int, Int, String)      // 继承合并时类型错误
+  InvalidComplexKey(Int, Int)         // 复杂键语法错误
+  YamlDecodeError(String)
+} derive(Eq, Show)
 
 
 /// 将 ParseError 转换为字符串
 pub fn to_string(self : ParseError) -> String {
   match self {
-    InvalidChar({ line, column }, c) =>
+    InvalidChar(line, column, c) =>
       "Invalid character '" + c.to_string() + "' at line " + line.to_string() + ", column " + column.to_string()
     InvalidEof => "Unexpected end of file"
-    InvalidNumber({ line, column }, s) =>
+    InvalidNumber(line, column, s) =>
       "Invalid number " + s + " at line " + line.to_string() + ", column " + column.to_string()
-    InvalidIdentEscape({ line, column }) =>
+    InvalidIdentEscape(line, column) =>
       "Invalid escape sequence in identifier at line " + line.to_string() + ", column " + column.to_string()
-    InvalidIndentation({ line, column }) =>
+    InvalidIndentation(line, column) =>
       "Invalid indentation at line " + line.to_string() + ", column " + column.to_string()
-    UndefinedAnchor({ line, column }, anchor) =>
+    UndefinedAnchor(line, column, anchor) =>
       "Undefined anchor '" + anchor + "' at line " + line.to_string() + ", column " + column.to_string()
-    CircularReference({ line, column }, anchor) =>
+    CircularReference(line, column, anchor) =>
       "Circular reference detected for anchor '" + anchor + "' at line " + line.to_string() + ", column " + column.to_string()
-    InvalidMerge({ line, column }, anchor) =>
+    InvalidMerge(line, column, anchor) =>
       "Invalid merge for anchor '" + anchor + "' at line " + line.to_string() + ", column " + column.to_string()
-    InvalidComplexKey({ line, column }) =>
+    InvalidComplexKey(line, column) =>
       "Invalid complex key syntax at line " + line.to_string() + ", column " + column.to_string()
+    YamlDecodeError(str) => 
+      str
   }
 }
 
-pub impl Show for ParseError with output(self, logger) {
-  logger.write_string(self.to_string())
-}
+// pub impl Show for ParseError with output(self, logger) {
+//   logger.write_string(self.to_string())
+// }
 
 pub impl Show for YamlValue with output(self, logger) {
   match self {
@@ -96,5 +89,3 @@ pub impl Show for YamlValue with output(self, logger) {
     }
   }
 }
-
-

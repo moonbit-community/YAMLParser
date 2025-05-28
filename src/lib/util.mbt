@@ -3,6 +3,7 @@ fn read_char(ctx : ParseContext) -> Char? {
   if ctx.offset < ctx.end_offset {
     let c = ctx.input[ctx.offset]
     ctx.offset += 1
+    ctx.column += 1
     let c1 = c.to_int()
     if c1 >= 0xD800 && c1 <= 0xDBFF {
       if ctx.offset < ctx.end_offset {
@@ -10,9 +11,14 @@ fn read_char(ctx : ParseContext) -> Char? {
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           ctx.offset += 1
           let c3 = (c1 << 10) + c2 - 0x35fdc00
-          return Some(Char::from_int(c3))
+          return Some(Int::unsafe_to_char(c3))
         }
       }
+    }
+    if(c == '\n'){
+      add_line(ctx)
+    }else {
+      ctx.column += 1
     }
     Some(c)
   } else {
@@ -30,7 +36,7 @@ fn peek_char(ctx : ParseContext) -> Char? {
         let c2 = ctx.input[ctx.offset + 1].to_int()
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           let c3 = (c1 << 10) + c2 - 0x35fdc00
-          return Some(Char::from_int(c3))
+          return Some(Int::unsafe_to_char(c3))
         }
       }
     }
@@ -50,7 +56,7 @@ fn peek_designated_char(ctx : ParseContext, position : Int) ->Char? {
         let c2 = ctx.input[position + 1].to_int()
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           let c3 = (c1 << 10) + c2 - 0x35fdc00
-          return Some(Char::from_int(c3))
+          return Some(Int::unsafe_to_char(c3))
         }
       }
     }
@@ -61,21 +67,26 @@ fn peek_designated_char(ctx : ParseContext, position : Int) ->Char? {
 }
 
 /// 将 offset 移动指定位数
-fn advance_offset(ctx : ParseContext, count: Int) -> Unit {
-  let mut moved = 0
-  while moved < count && ctx.offset < ctx.end_offset {
-    let c1 = ctx.input[ctx.offset].to_int()
-    ctx.offset += 1
-    moved += 1
-    // 如果当前是高代理项，并且下一个字符仍在范围内，确保一起跳过
-    if c1 >= 0xD800 && c1 <= 0xDBFF && ctx.offset < ctx.end_offset {
-      let c2 = ctx.input[ctx.offset].to_int()
-      if c2 >= 0xDC00 && c2 <= 0xDFFF {
-        ctx.offset += 1
-      }
-    }
-  }
-}
+// fn advance_offset(ctx : ParseContext, count: Int) -> Unit {
+//   let mut moved = 0
+//   while moved < count && ctx.offset < ctx.end_offset {
+//     let c1 = ctx.input[ctx.offset].to_int()
+//     ctx.offset += 1
+//     moved += 1
+//     if(peek_char(ctx).unwrap() == '\n'){
+//       add_line(ctx)
+//     }else{
+//       ctx.column += 1
+//     }
+//     // 如果当前是高代理项，并且下一个字符仍在范围内，确保一起跳过
+//     if c1 >= 0xD800 && c1 <= 0xDBFF && ctx.offset < ctx.end_offset {
+//       let c2 = ctx.input[ctx.offset].to_int()
+//       if c2 >= 0xDC00 && c2 <= 0xDFFF {
+//         ctx.offset += 1
+//       }
+//     }
+//   }
+// }
 
 /// 将 offset 后移指定位数
 fn back_offset(ctx : ParseContext, count: Int) -> Unit {
@@ -83,6 +94,12 @@ fn back_offset(ctx : ParseContext, count: Int) -> Unit {
   while moved < count && ctx.offset < ctx.end_offset {
     let c1 = ctx.input[ctx.offset].to_int()
     ctx.offset -= 1
+    if(peek_char(ctx).unwrap() == '\n'){
+      // 这里有问题，需要修改column
+      ctx.line -= 1
+    }else{
+      ctx.column -= 1
+    }
     moved += 1
     // 如果当前是高代理项，并且下一个字符仍在范围内，确保一起跳过
     if c1 >= 0xD800 && c1 <= 0xDBFF && ctx.offset < ctx.end_offset {
@@ -103,31 +120,36 @@ fn assert_char_escape(ctx : ParseContext, c : Char) -> Unit!ParseError {
 }
 
 /// 检查字符是否为指定字符
-fn assert_char(ctx : ParseContext, c : Char) -> Unit!ParseError {
-  match read_char(ctx) {
-    Some(c2) => if c == c2 { () } else { back_offset(ctx, 1) }
-    None => raise InvalidEof
-  }
-}
+// fn assert_char(ctx : ParseContext, c : Char) -> Unit!ParseError {
+//   match read_char(ctx) {
+//     Some(c2) => if c == c2 { () } else { back_offset(ctx, 1) }
+//     None => raise InvalidEof
+//   }
+// }
 
 /// 移动字符
 fn invalid_char[T](ctx : ParseContext, shift~ : Int = 0) -> T!ParseError {
   let offset = ctx.offset + shift
-  raise InvalidChar(offset_to_position(ctx.input, offset), ctx.input[offset])
+  raise InvalidChar(ctx.line, ctx.column, ctx.input[offset])
 }
 
-/// 移动 offset
-fn offset_to_position(input : String, offset : Int) -> Position {
-  let mut line = 1
-  let mut column = 0
-  for i = 0; i < offset; i = i + 1 {
-    let c = input[i]
-    if c == '\n' {
-      line += 1
-      column = 0
-    } else {
-      column += 1
-    }
-  }
-  return Position::{ line, column }
+/// 将 offset 转化为位置
+// fn offset_to_position(input : String, offset : Int) -> Position {
+//   let mut line = 1
+//   let mut column = 0
+//   for i = 0; i < offset; i = i + 1 {
+//     let c = input[i]
+//     if c == '\n' {
+//       line += 1
+//       column = 0
+//     } else {
+//       column += 1
+//     }
+//   }
+//   return Position::{ line, column }
+// }
+
+fn add_line(ctx: ParseContext) -> Unit{
+  ctx.line = ctx.line + 1
+  ctx.column = 0
 }

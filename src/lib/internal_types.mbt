@@ -1,16 +1,16 @@
-///|
-// YAML 解析上下文
-priv struct YAMLContext {
-  mut offset : Int       // 当前解析位置
-  input : String         // 输入字符串
-  end_offset : Int       // 输入字符串的总长度
+/// 解析的文本
+priv struct ParseContext {
+  mut offset : Int
+  input : String
+  end_offset : Int
+  mut line : Int
+  mut column : Int
 }
 
-///|
-// 创建新的 YAML 解析上下文
-fn YAMLContext::make(input : String) -> YAMLContext {
-  { offset: 0, input, end_offset: input.length() }
+fn ParseContext::make(input : String) -> ParseContext {
+  { offset: 0, input, end_offset: input.length(), line: 1, column: 0}
 }
+
 
 ///|
 // YAML 字符类别

@@ -9,35 +9,35 @@ let non_ascii_whitespace : YAMLCharClass = YAMLCharClass::of([
   ('\uFEFF', '\uFEFF'),
 ])
 
-fn lex_value(ctx : ParseContext, pos : Position) -> YamlValue!ParseError{
+fn lex_value(ctx : ParseContext) -> YamlValue!ParseError{
     for{
         match(read_char(ctx)){
-            Some('\t' | '\n' | '\r') => continue
+            Some('\t' | ' ' | '\n' | '\r') => continue
 
+            // NULL
             Some('~') => {
-                // NULL
                 return YamlValue::Null
             }
 
+            // TRUE
             Some('t' | 'T') => {
-                // TRUE
                 assert_char_escape!(ctx, 'r');
                 assert_char_escape!(ctx, 'u');
                 assert_char_escape!(ctx, 'e');
                 return YamlValue::True
             }
 
+            // False
             Some('f' | 'F') => {
-                // False
                 assert_char_escape!(ctx, 'a');
                 assert_char_escape!(ctx, 'l');
                 assert_char_escape!(ctx, 's');
                 assert_char_escape!(ctx, 'e');
                 return YamlValue::False
             }
-
+            
+            // 解析 0 开头的数字，包括科学计数法、小数、二进制、十六进制等
             Some('0') => {
-                // 解析 0 开头的数字，包括科学计数法、小数、二进制、十六进制等
                 let n = ctx.lex_zero!(start=ctx.offset - 1)
                 return Number(n)
             }

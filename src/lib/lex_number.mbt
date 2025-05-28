@@ -131,7 +131,7 @@ fn ParseContext::lex_data(
     month = @strconv.parse_int!(month_s)
     day = @strconv.parse_int!(day_s)
   } catch {
-    _ => raise InvalidNumber(offset_to_position(ctx.input, start), month_s)
+    _ => raise InvalidNumber(ctx.line, ctx.column, month_s)
   }
 
   // 检查月日
@@ -141,7 +141,7 @@ fn ParseContext::lex_data(
       if (day >= 1 && day <= 31) {
         return data
       }else {
-        raise InvalidNumber(offset_to_position(ctx.input, start), day_s)
+        raise InvalidNumber(ctx.line, ctx.column, day_s)
       }
     }
 
@@ -150,7 +150,7 @@ fn ParseContext::lex_data(
       if (day >= 1 && day <= 30) {
         return data
       }else {
-        raise InvalidNumber(offset_to_position(ctx.input, start), day_s)
+        raise InvalidNumber(ctx.line, ctx.column, day_s)
       }
     }
 
@@ -159,8 +159,12 @@ fn ParseContext::lex_data(
       if ((is_leap_year(year) && day >= 1 && day <= 29) || (not(is_leap_year(year)) && day >= 1 && day <= 28)) {
         return data
       }else {
-        raise InvalidNumber(offset_to_position(ctx.input, start), day_s)
+        raise InvalidNumber(ctx.line, ctx.column, day_s)
       }
+    }
+
+    _ => {
+      raise InvalidNumber(ctx.line, ctx.column, month_s)
     }
   }
 }
@@ -279,7 +283,7 @@ fn ParseContext::lex_number_end(
   try {
     @strconv.parse_double!(s)
   } catch {
-    _ => raise InvalidNumber(offset_to_position(ctx.input, start), s)
+    _ => raise InvalidNumber(ctx.line, ctx.column, s)
   }
 }
 
@@ -296,6 +300,6 @@ fn ParseContext::lex_number_end_bases(ctx : ParseContext,
     n = @strconv.parse_int!(s)
     n.to_double()
   } catch {
-    _ => raise InvalidNumber(offset_to_position(ctx.input, start), s)
+    _ => raise InvalidNumber(ctx.line, ctx.column, s)
   }
 }

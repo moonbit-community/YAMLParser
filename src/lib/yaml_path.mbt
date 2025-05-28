@@ -1,6 +1,6 @@
 /// YAML 解析路径
 pub enum YamlPath {
-  Root
+  //Root
   Key(YamlPath, mut key~ : String)
   Index(YamlPath, mut index~ : Int)
 } derive(Eq)
@@ -19,18 +19,18 @@ pub fn add_key(self : YamlPath, key : String) -> YamlPath {
 
 ///|
 /// 输出 YAML 路径到日志
-pub fn output(self : YamlPath, logger : &Logger) -> Unit {
-  match self {
-    Root => logger.write_string("$")
-    Key(p, key~) => logger..write_object(p)..write_string(".").write_string(key)
-    Index(p, index~) =>
-      logger
-      ..write_object(p)
-      ..write_string("[")
-      ..write_object(index)
-      .write_string("]")
-  }
-}
+// pub fn output(self : YamlPath, logger : &Logger) -> Unit {
+//   match self {
+//     Root => logger.write_string("$")
+//     Key(p, key~) => logger..write_object(p)..write_string(".").write_string(key)
+//     Index(p, index~) =>
+//       logger
+//       ..write_object(p)
+//       ..write_string("[")
+//       ..write_object(index)
+//       .write_string("]")
+//   }
+// }
 
 ///|
 /// 更新 Key（可变操作）
