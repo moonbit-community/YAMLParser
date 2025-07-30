@@ -16,6 +16,19 @@ YAMLParser based on moonbit and is designed for efficient and strict YAML parsin
   - String parsing: Supports single quotes ('), double quotes ("), and multi-line strings, automatically merging line breaks.
   - Number parsing: Supports binary (0b), scientific notation (1.23e4).
 
+# Development Progress
+| Function     | Description                                               | Progress   |
+|--------------|-----------------------------------------------------------|------------|
+| Simple Data Type | - null<br>- True<br>- False<br>- scientific notation, binary,octal and hexadecimal integers | - ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br> |
+| String | - Single Quotes (')<br>- Double Quotes (")<br>- Multi-Line Strings                                   | - ✅ Done<br>- ✅ Done<br>- ⏳ Doing |
+| Array | Array Type                                   | - ✅ Done |
+| Object | - Simple Object<br>- Nested Object                                   | - ✅ Done<br>- ✅ Done |
+| Indentation | Parses indentation levels with flexible spacing | - ✅ Done |
+| Anchors (&) and Aliases (*) | - Anchors (&) <br>- Aliases (*) | - ✅ Done |
+| Handles inheritance (<<) | - Handles inheritance (<<) | - ✅ Done |
+| Complex Keys (?) | - Complex Keys (?) | - ⛔ ToDo |
+| Error Type | - InvalidChar<br>- InvalidEof<br>- InvalidNumber<br>- InvalidIdentEscape<br>- InvalidIndentationUndefinedAnchor<br>- CircularReference<br>- InvalidMerge<br>- InvalidComplexKey<br>- InvalidContainer<br>- YamlDecodeError | - ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done<br>- ✅ Done |
+
 # Test Case
 ```Moonbit
 #|boolean:
