@@ -28,6 +28,7 @@ pub(all) type! ParseError {
   CircularReference(Int, Int, String) // 循环引用
   InvalidMerge(Int, Int, String)      // 继承合并时类型错误
   InvalidComplexKey(Int, Int)         // 复杂键语法错误
+  InvalidContainer(Int, Int)
   YamlDecodeError(String)
 } derive(Eq, Show)
 
@@ -52,6 +53,8 @@ pub fn to_string(self : ParseError) -> String {
       "Invalid merge for anchor '" + anchor + "' at line " + line.to_string() + ", column " + column.to_string()
     InvalidComplexKey(line, column) =>
       "Invalid complex key syntax at line " + line.to_string() + ", column " + column.to_string()
+    InvalidContainer(line, column) => 
+      "Invalid container at line " + line.to_string() + ", column " + column.to_string()
     YamlDecodeError(str) => 
       str
   }

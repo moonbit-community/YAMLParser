@@ -4,10 +4,10 @@ fn read_char(ctx : ParseContext) -> Char? {
     let c = ctx.input[ctx.offset]
     ctx.offset += 1
     ctx.column += 1
-    let c1 = c.to_int()
+    let c1 = c//.to_int()
     if c1 >= 0xD800 && c1 <= 0xDBFF {
       if ctx.offset < ctx.end_offset {
-        let c2 = ctx.input[ctx.offset].to_int()
+        let c2 = ctx.input[ctx.offset]//.to_int()
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           ctx.offset += 1
           let c3 = (c1 << 10) + c2 - 0x35fdc00
@@ -20,7 +20,7 @@ fn read_char(ctx : ParseContext) -> Char? {
     }else {
       ctx.column += 1
     }
-    Some(c)
+    Some(c.to_char().unwrap())
   } else {
     None
   }
@@ -30,17 +30,17 @@ fn read_char(ctx : ParseContext) -> Char? {
 fn peek_char(ctx : ParseContext) -> Char? {
   if ctx.offset < ctx.end_offset {
     let c = ctx.input[ctx.offset]
-    let c1 = c.to_int()
+    let c1 = c//.to_int()
     if c1 >= 0xD800 && c1 <= 0xDBFF {
       if ctx.offset + 1 < ctx.end_offset {
-        let c2 = ctx.input[ctx.offset + 1].to_int()
+        let c2 = ctx.input[ctx.offset + 1]//.to_int()
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           let c3 = (c1 << 10) + c2 - 0x35fdc00
           return Some(Int::unsafe_to_char(c3))
         }
       }
     }
-    Some(c)
+    Some(c.to_char().unwrap())
   } else {
     None
   }
@@ -50,17 +50,17 @@ fn peek_char(ctx : ParseContext) -> Char? {
 fn peek_designated_char(ctx : ParseContext, position : Int) ->Char? {
   if position < ctx.end_offset {
     let c = ctx.input[position]
-    let c1 = c.to_int()
+    let c1 = c//.to_int()
     if c1 >= 0xD800 && c1 <= 0xDBFF {
       if position + 1 < ctx.end_offset {
-        let c2 = ctx.input[position + 1].to_int()
+        let c2 = ctx.input[position + 1]//.to_int()
         if c2 >= 0xDC00 && c2 <= 0xDFFF {
           let c3 = (c1 << 10) + c2 - 0x35fdc00
           return Some(Int::unsafe_to_char(c3))
         }
       }
     }
-    Some(c)
+    Some(c.to_char().unwrap())
   } else {
     None
   }
@@ -92,7 +92,7 @@ fn peek_designated_char(ctx : ParseContext, position : Int) ->Char? {
 fn back_offset(ctx : ParseContext, count: Int) -> Unit {
   let mut moved = 0
   while moved < count && ctx.offset < ctx.end_offset {
-    let c1 = ctx.input[ctx.offset].to_int()
+    let c1 = ctx.input[ctx.offset]//.to_int()
     ctx.offset -= 1
     if(peek_char(ctx).unwrap() == '\n'){
       // 这里有问题，需要修改column
@@ -103,7 +103,7 @@ fn back_offset(ctx : ParseContext, count: Int) -> Unit {
     moved += 1
     // 如果当前是高代理项，并且下一个字符仍在范围内，确保一起跳过
     if c1 >= 0xD800 && c1 <= 0xDBFF && ctx.offset < ctx.end_offset {
-      let c2 = ctx.input[ctx.offset].to_int()
+      let c2 = ctx.input[ctx.offset]//.to_int()
       if c2 >= 0xDC00 && c2 <= 0xDFFF {
         ctx.offset -= 1
       }
@@ -130,7 +130,7 @@ fn assert_char_escape(ctx : ParseContext, c : Char) -> Unit!ParseError {
 /// 移动字符
 fn invalid_char[T](ctx : ParseContext, shift~ : Int = 0) -> T!ParseError {
   let offset = ctx.offset + shift
-  raise InvalidChar(ctx.line, ctx.column, ctx.input[offset])
+  raise InvalidChar(ctx.line, ctx.column, ctx.input[offset].to_char().unwrap())
 }
 
 /// 将 offset 转化为位置

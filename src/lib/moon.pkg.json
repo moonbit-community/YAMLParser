@@ -11,10 +11,11 @@
 
     ],
     "test-import": [
-      "moonbitlang/core/result",
-      "moonbitlang/core/option",
-      "moonbitlang/core/unit",
-      "moonbitlang/core/array"
+      // "moonbitlang/core/result",
+      // "moonbitlang/core/option",
+      // "moonbitlang/core/unit",
+      // "moonbitlang/core/array",
+      // "moonbitlang/core/yaml"
     ],
-    "test-import-all": false
+    //"test-import-all": false
   }

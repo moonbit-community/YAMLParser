@@ -7,7 +7,7 @@ fn report_error(err : ParseError) -> Unit!ParseError {
 /// 统计字符串前导空格数
 fn count_leading_spaces(ctx: ParseContext) -> Int!ParseError {
   let mut count = 0
-  for {
+  while(ctx.offset < ctx.end_offset) {
     match read_char(ctx) {
       Some(' ') => {
         count = count + 1
@@ -50,7 +50,7 @@ fn deep_merge(target : YamlValue, source : YamlValue, ctx: ParseContext) -> Yaml
 
 /// 跳过空白或注释，一直跳到非空白或换行
 fn skip_ws_and_comments_no_wrap(ctx: ParseContext) -> Unit!ParseError {
-  while(true) {
+  while(ctx.offset < ctx.end_offset) {
     match peek_char(ctx) {
       Some(' ' | '\t' | '\r') => {
           let _ = read_char(ctx)
@@ -81,8 +81,8 @@ fn skip_ws_and_comments_no_wrap(ctx: ParseContext) -> Unit!ParseError {
 }
 
 /// 跳过空白或注释，一直跳到非空白或换行
-/// 换行后接着跳，直到非空白或注释
-fn skip_ws_and_comments(ctx: ParseContext) -> Unit!ParseError {
+/// 换行后接着跳，直到非空白
+fn skip_ws_and_comments(ctx: ParseContext) -> Unit raise ParseError {
   while(true) {
     match peek_char(ctx) {
       
@@ -109,7 +109,7 @@ fn skip_ws_and_comments(ctx: ParseContext) -> Unit!ParseError {
 }
 
 /// 主解析器：直接解析 YAML 文本，不分离词法和语法
-pub fn parse_yaml(input : String) -> YamlValue!ParseError {
+pub fn parse_yaml(input : String) -> YamlValue raise ParseError {
   let ctx = ParseContext::make(input)  // 解析文本
   
   let anchors: Map[String, YamlValue] = {}       // 锚点存储表
@@ -122,11 +122,12 @@ pub fn parse_yaml(input : String) -> YamlValue!ParseError {
   let intent_stack : @deque.T[Int] = @deque.new()  // 前导空格数量栈
   intent_stack.push_front(0)
 
-  let result = parse_mapping!(ctx, container_stack, intent_stack, anchors)
+  let result = parse_mapping(ctx, container_stack, intent_stack, anchors)
   return result
 }
 
 fn parse_mapping(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_stack: @deque.T[Int], anchors: Map[String, YamlValue]) -> YamlValue!ParseError {
+  println("parse_mapping")
   let mut current_container = YamlValue::Object({})  // 当前的容器
   let mut current_intend = 0
   // 获取当前容器
@@ -140,7 +141,7 @@ fn parse_mapping(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent
     }
   }
 
-  let mut count_leading_spaces_this = count_leading_spaces!(ctx)
+  let mut count_leading_spaces_this = count_leading_spaces(ctx)
   if(count_leading_spaces_this > current_intend){
     // 当前缩进过多，报错
     raise InvalidIndentation(ctx.line, ctx.column)
@@ -149,25 +150,29 @@ fn parse_mapping(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent
   // 开始解析映射，需要解析到缩进小于当前 map 的地方
   // 缩进刚好为栈顶缩进，使用
   while(count_leading_spaces_this == current_intend && ctx.offset < ctx.end_offset){
+    println(count_leading_spaces_this)
     let key = parse_key(ctx)
-    skip_ws_and_comments_no_wrap!(ctx)
+    skip_ws_and_comments_no_wrap(ctx)
     let colon = read_char(ctx).unwrap()  // 读取冒号
     // key后面不跟冒号，报错
     if(colon != ':'){
-      report_error!(InvalidChar(ctx.line, ctx.column, colon))
+      report_error(InvalidChar(ctx.line, ctx.column, colon))
     }
 
-    let value = parse_value!(ctx, container_stack, intent_stack, anchors)
+    skip_ws_and_comments_no_wrap(ctx)
+    let value = parse_value(ctx, container_stack, intent_stack, anchors)
+    println("parse value finished")
     // 将当前解析的值加入到映射中
     match(current_container) {
       Object(obj) => {
         obj.set(key, value)
       }
       _ => {
+        
         raise InvalidIndentation(ctx.line, ctx.column)  // 报错需要斟酌
       }
     }
-    count_leading_spaces_this = count_leading_spaces!(ctx)
+    count_leading_spaces_this = count_leading_spaces(ctx)
   }
   
   // 当前映射解析完毕，弹栈
@@ -214,11 +219,14 @@ fn is_latter_number(ch: Char) -> Bool {
 
 /// 解析值
 fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_stack: @deque.T[Int], anchors: Map[String, YamlValue]) -> YamlValue!ParseError {
-  skip_ws_and_comments_no_wrap!(ctx)
+  println("parse_value")
+  //skip_ws_and_comments_no_wrap!(ctx)
   match(peek_char(ctx)) {
     Some(' ') => {
       // 换行后开头是空格，表示要进入新的容器
       let intent = count_leading_spaces!(ctx)  
+      
+      println(intent)
 
       match(intent_stack.front()) {
         Some(front_indent) => {
@@ -227,7 +235,7 @@ fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
             raise InvalidIndentation(ctx.line, ctx.column)
 
           } else{
-            // 当前缩进更多，需要新建容器
+            // 当前缩进更多，需要进入新容器
             match(peek_char(ctx)){
               Some('-') => {
                 // 需要解析数组
@@ -264,12 +272,37 @@ fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
                 let new_container: YamlValue = YamlValue::Object({})
                 container_stack.push_front(new_container)
                 intent_stack.push_front(intent)
-                parse_quote!(anchors, new_container, ctx)
+                let _ = parse_quote(anchors, new_container, ctx)
+                return parse_mapping!(ctx, container_stack, intent_stack, anchors)
               }
 
               Some(_) => {
-                // 其他情况，报错
-                raise InvalidIndentation(ctx.line, ctx.column)
+                // 其他情况，解析下级映射
+                println(11111)
+                println(container_stack.front())
+                let new_container: YamlValue = YamlValue::Object({})
+                container_stack.push_front(new_container)
+                intent_stack.push_front(intent)
+                let this_key = parse_key(ctx)
+                skip_ws_and_comments_no_wrap(ctx)
+                let colon = read_char(ctx).unwrap()  // 读取冒号
+                // key后面不跟冒号，报错
+                if(colon != ':'){
+                  report_error(InvalidChar(ctx.line, ctx.column, colon))
+                }
+                skip_ws_and_comments_no_wrap(ctx)
+                let value = parse_value(ctx, container_stack, intent_stack, anchors)
+                match(container_stack.front()){
+                  Some(YamlValue :: Object(obj)) => {
+                    // 当前栈顶容器为对象，继续解析
+                    obj.set(this_key, value)
+                  }
+                  _ => {
+                    raise InvalidContainer(ctx.line, ctx.column)
+                  }
+                }
+                
+                return parse_mapping!(ctx, container_stack, intent_stack, anchors)
               }
 
               None => {
@@ -291,9 +324,12 @@ fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
       let _ = read_char(ctx)
       skip_ws_and_comments_no_wrap!(ctx)  // 跳过空格
       let anchor = parse_key(ctx)  // 获取锚点名称
+      println("锚点名称：" + anchor)
+
       match(container_stack.front()) {
           Some(front_container) => {
             anchors.set(anchor, front_container)
+            println("当前锚点属性为：" + front_container.to_string())
           }
           _ => {
             raise InvalidIndentation(ctx.line, ctx.column)
@@ -310,6 +346,7 @@ fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
       match(container_stack.front()) {
           Some(front_container) => {
             parse_quote!(anchors, front_container, ctx)
+            //parse_mapping!(ctx, container_stack, intent_stack, anchors)
           }
           _ => {
             raise InvalidIndentation(ctx.line, ctx.column)
@@ -319,8 +356,10 @@ fn parse_value(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
 
     // 其他情况，解析为标量
     Some(_) => {
+      println("lex_value")
       lex_value!(ctx)
     }
+
     None => {
       raise InvalidEof
     }
@@ -351,9 +390,35 @@ fn parse_array(ctx: ParseContext, container_stack: @deque.T[YamlValue], intent_s
   }
 
   // 开始解析映射，需要解析到缩进小于当前 array 的地方
+  skip_ws_and_comments_no_wrap!(ctx)
+  let value = parse_value!(ctx, container_stack, intent_stack, anchors)
+  println(value)
+
+  // 将当前解析的值加入到数组中
+  match(current_container) {
+    Array(arr) => {
+      arr.push(value)
+      println(arr)
+    }
+    _ => {
+      raise InvalidIndentation(ctx.line, ctx.column)  // 报错需要斟酌
+    }
+  }
+  
+  count_leading_spaces_this = count_leading_spaces!(ctx)
+
   while(count_leading_spaces_this == current_intend && ctx.offset < ctx.end_offset){
+    println("parse array")
+    skip_ws_and_comments_no_wrap!(ctx)
+      println(peek_char(ctx).unwrap())
+    if(peek_char(ctx).unwrap() == '-'){
+      println(peek_char(ctx).unwrap())
+      let _ = read_char(ctx)
+    }
+    
     skip_ws_and_comments_no_wrap!(ctx)
     let value = parse_value!(ctx, container_stack, intent_stack, anchors)
+    println(value)
 
     // 将当前解析的值加入到数组中
     match(current_container) {

@@ -98,7 +98,7 @@ pub impl FromYaml for Char with from_yaml(yaml) {
       if a.length() != 1 {
         decode_error!("Char::from_yaml: expected single character")
       } else {
-        a[0]
+        a[0].to_char().unwrap()
       }
     _ => decode_error!("Char::from_yaml: expected string")
   }
